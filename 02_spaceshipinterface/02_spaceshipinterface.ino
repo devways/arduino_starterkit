@@ -21,7 +21,9 @@
 
 int switchState = 0;
 int previousSwitchState = 0;
+bool blinkState = false;
 bool mode = false;
+unsigned long previousMillis = 0;
 
 bool buttonIsPressed() {
   if (switchState == true && previousSwitchState == false) {
@@ -48,17 +50,18 @@ void loop() {
   if (buttonIsPressed()) changeMode();
 
   if (!mode) {
-    digitalWrite(3, HIGH); // turn the green LED on pin 3 on
-    digitalWrite(4, LOW);  // turn the red LED on pin 4 off
-    digitalWrite(5, LOW);  // turn the red LED on pin 5 off
+    digitalWrite(3, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(5, LOW);
   } else {
-    digitalWrite(3, LOW);  // turn the green LED on pin 3 off
-    digitalWrite(4, LOW);  // turn the red LED on pin 4 off
-    digitalWrite(5, HIGH); // turn the red LED on pin 5 on
-    delay(250);
-    digitalWrite(4, HIGH); // turn the red LED on pin 4 on
-    digitalWrite(5, LOW);  // turn the red LED on pin 5 off
-    delay(250);
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= 250) {
+       previousMillis = currentMillis;
+       blinkState = !blinkState;
+    }
+    digitalWrite(3, LOW);
+    digitalWrite(5, blinkState);
+    digitalWrite(4, !blinkState);
   }
 
   if (previousSwitchState == switchState) return;
