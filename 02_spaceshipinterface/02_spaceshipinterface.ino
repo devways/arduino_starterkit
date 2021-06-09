@@ -40,12 +40,6 @@ bool switch_2_previous_type_of_press_is_short = true;
 bool switch_1_long_activated = false;
 bool switch_2_long_activated = false;
 
-
-// unsigned short int switch_1_pressed_count = 0;
-// unsigned short int switch_2_pressed_count = 0;
-// unsigned short int switch_1_long_pressed_count = 0;
-// unsigned short int switch_2_long_pressed_count = 0;
-
 int mode = 0;
 
 void setup() {
@@ -91,6 +85,60 @@ void loop() {
 
   switch_actions();
 
+  switch (mode)
+  {
+    case 1:
+      lightUpFromOutsideToInside();
+      break;
+    case 2:
+      lightUpFromOutsideToInsideContinuousTransition();
+      break;
+    case 3:
+      lightUpFromOutsideToInsideContinuous();
+      break;
+    case 4:
+      lightRedContinuousTransitionPlusGreen();
+      break;
+    case 5:
+      lightRedPlusGreen();
+      break;
+    case 6:
+      lightUpFromLeftToRight();
+      break;
+    case 7:
+      lightUpFromLeftToRightContinuousWithTransition();
+      break;
+    case 8:
+      lightUpFromLeftToRightContinuous();
+      break;
+    case 9:
+      lightUpFromLeftToRightContinuousWithTransitionPlusLeftGreen();
+      break;
+    case 10:
+      lightUpLeftGreen();
+      break;
+    case 11:
+      lightUpFromRightToLeft();
+      break;
+    case 12:
+      lightUpFromRightToLeftContinuousWithTransition();
+      break;
+    case 13:
+      lightUpFromRightToLeftContinuous();
+      break;
+    case 14:
+      lightUpFromRightToLeftContinuousWithTransitionPlusRightGreen();
+      break;
+    case 15:
+      lightUpRightGreen();
+      break;
+  default:
+    digitalWrite(3, LOW);
+    digitalWrite(4, HIGH);
+    digitalWrite(5, LOW);
+    break;
+  }
+
   switch_1_previous_state = switch_1_state;
   switch_2_previous_state = switch_2_state;
 }
@@ -101,17 +149,16 @@ void loop() {
  ******************************
 */
 
+void actionLightUpFromLeftToRight() {
+  if (red_led_index < 2) {
+    red_led_index++;
+  } else {
+    red_led_index = 0;
+  }
+}
+
 void lightUpFromLeftToRight() {
   int previous_red_led_index = red_led_index;
-
-  // futher this condition move in another function use when the switch 1 is click once
-  if (switch_1_state == HIGH && switch_1_previous_state == LOW) {
-    if (red_led_index < 2) {
-      red_led_index++;
-    } else {
-      red_led_index = 0;
-    }
-  }
   
   digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
   digitalWrite(OUTPUT_RED_LED_ARRAY[red_led_index], HIGH);
@@ -170,17 +217,16 @@ void lightUpFromLeftToRightContinuousWithTransitionPlusLeftGreen() {
  ******************************
 */
 
+void actionLightUpFromRightToLeft() {
+  if (red_led_index > 0) {
+    red_led_index--;
+  } else {
+    red_led_index = 2;
+  }
+}
+
 void lightUpFromRightToLeft() {
   int previous_red_led_index = red_led_index;
-
-  // futher this condition move in another function use when the switch 2 is click once
-  if (switch_1_state == HIGH && switch_1_previous_state == LOW) {
-    if (red_led_index > 0) {
-      red_led_index--;
-    } else {
-      red_led_index = 2;
-    }
-  }
   
   digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
   digitalWrite(OUTPUT_RED_LED_ARRAY[red_led_index], HIGH);
@@ -241,21 +287,20 @@ int right_red_led_index = 2;
 int previous_left_red_led_index = left_red_led_index;
 int previous_right_red_led_index = right_red_led_index;
 
+void actionLightUpFromOutsideToInside() {
+  int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+  if (left_red_led_index < (array_length / 2)) {
+    left_red_led_index++;
+    right_red_led_index--;
+  } else {
+    left_red_led_index = 0;
+    right_red_led_index = array_length - 1;
+  }
+}
+
 void lightUpFromOutsideToInside() {
   previous_left_red_led_index = left_red_led_index;
   previous_right_red_led_index = right_red_led_index;
-
-    // futher this condition move in another function use when the switch 1 & 2 is click simultanuous once 
-  if (switch_1_state == HIGH && switch_1_previous_state == LOW) {
-    int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
-    if (left_red_led_index < (array_length / 2)) {
-      left_red_led_index++;
-      right_red_led_index--;
-    } else {
-      left_red_led_index = 0;
-      right_red_led_index = array_length - 1;
-    }
-  }
 
   digitalWrite(OUTPUT_RED_LED_ARRAY[previous_left_red_led_index], LOW);
   digitalWrite(OUTPUT_RED_LED_ARRAY[previous_right_red_led_index], LOW);
@@ -348,6 +393,15 @@ void lightRedContinuousTransitionPlusGreen() {
   digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
 }
 
+void resetLightUp() {
+  int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+  for(int i = 0; i < array_length; i++) {
+    digitalWrite(OUTPUT_RED_LED_ARRAY[i], LOW);
+  }
+  digitalWrite(OUTPUT_GREEN_LED_1, LOW);
+  digitalWrite(OUTPUT_GREEN_LED_2, LOW);
+}
+
 void switch_detection(
   bool *switch_state,
   bool *switch_previous_state,
@@ -404,8 +458,10 @@ void switch_actions() {
   unsigned long int current_detection_end_timestamp = millis();
 
   if (switch_detection_end && (current_detection_end_timestamp - previous_detection_end_timestamp >= 300)) {
+    resetLightUp();
+
     if (switch_1_short_press_count == 1 && switch_2_short_press_count == 1) {
-      // need action
+      actionLightUpFromOutsideToInside();
       mode = 1;
     } else if (switch_1_short_press_count == 2 && switch_2_short_press_count == 2 && switch_1_long_press_count == 1 && switch_2_long_press_count == 1) {
       mode = 2;
@@ -416,7 +472,7 @@ void switch_actions() {
     } else if (switch_1_long_press_count == 2 && switch_2_long_press_count == 2) {
       mode = 5;
     } else if (switch_1_short_press_count == 1) {
-      // need action
+      actionLightUpFromLeftToRight();
       mode = 6;
     } else if (switch_1_short_press_count == 2 && switch_1_long_press_count == 1) {
       mode = 7;
@@ -427,7 +483,7 @@ void switch_actions() {
     } else if (switch_1_long_press_count == 2) {
       mode = 10;
     } else if (switch_2_short_press_count == 1) {
-      // need action
+      actionLightUpFromRightToLeft();
       mode = 11;
     } else if (switch_2_short_press_count == 2 && switch_2_long_press_count == 1) {
       mode = 12;
@@ -438,7 +494,7 @@ void switch_actions() {
     } else if (switch_2_long_press_count == 2) {
       mode = 15;
     }
-
+    
     switch_1_short_press_count = 0;
     switch_1_long_press_count = 0;
     switch_1_long_activated = false;
