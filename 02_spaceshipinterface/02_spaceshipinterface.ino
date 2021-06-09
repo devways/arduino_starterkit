@@ -30,7 +30,7 @@ unsigned long int previous_animation_timestamp = 0;
 
 unsigned short int switch_1_pressed_count = 0;
 unsigned short int switch_2_pressed_count = 0;
-unsigned short int switch_1_long_pressed_count = 0;
+// unsigned short int switch_1_long_pressed_count = 0;
 unsigned short int switch_2_long_pressed_count = 0;
 
 char mode[100] = "FROM";
@@ -49,7 +49,12 @@ void setup() {
 
 void loop() {
   switch_1_state = digitalRead(INPUT_SWITCH_1);
+  switch_2_state = digitalRead(INPUT_SWITCH_2);
+
+  switch_1_detection();
+
   switch_1_previous_state = switch_1_state;
+  switch_2_previous_state = switch_2_state;
 }
 
 /*
@@ -303,4 +308,53 @@ void lightRedContinuousTransitionPlusGreen() {
 
   digitalWrite(OUTPUT_GREEN_LED_1, HIGH);
   digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
+}
+
+int switch_1_short_press_count = 0;
+int switch_1_long_press_count = 0;
+bool switch_1_previous_type_of_press_is_short = true;
+bool switch_1_long_activated = false;
+
+void switch_1_detection() {
+  unsigned long int current_timestamp_switch_1 = millis();
+
+  // switch 1 is pressed
+  if (switch_1_state == true && switch_1_previous_state == false) {
+    previous_timestamp_switch_1 = current_timestamp_switch_1;
+    switch_1_pressed = true;
+    switch_1_released = false;
+  }
+
+  // switch 1 is release
+  if (switch_1_state == false && switch_1_previous_state == true) {
+    if (switch_1_previous_type_of_press_is_short && switch_1_short_press_count < 2) {
+      switch_1_short_press_count++;
+    } else if (!switch_1_previous_type_of_press_is_short && switch_1_long_activated && switch_1_long_press_count < 2) {
+      switch_1_long_activated = false;
+      switch_1_long_press_count++;
+    }
+    switch_1_pressed = false;
+    switch_1_released = true;
+    previous_timestamp_switch_1 = current_timestamp_switch_1;
+  }
+
+  // switch 1 is currently pressed for more than 1000ms
+  if (switch_1_state == true && (current_timestamp_switch_1 - previous_timestamp_switch_1 >= 1000)) {
+    // prevent use of short press after long press
+    switch_1_previous_type_of_press_is_short = false;
+    // prevent a short press after long detected as long press
+    switch_1_long_activated = true;
+  }
+
+  // switch 1 has been released and 300ms has been passed since release
+  // theorically the sequence of input is end
+  if (switch_1_released == true && (current_timestamp_switch_1 - previous_timestamp_switch_1 >= 300)) {
+    switch_1_released = false;
+    switch_1_short_press_count = 0;
+    switch_1_long_press_count = 0;
+    switch_1_long_activated = false;
+    switch_1_previous_type_of_press_is_short = true;
+  }
+
+
 }
