@@ -25,15 +25,28 @@ bool switch_2_previous_state = false;
 unsigned long previous_timestamp_switch_1 = 0;
 unsigned long previous_timestamp_switch_2 = 0;
 
+unsigned long previous_detection_end_timestamp = 0;
+
 unsigned long int previous_timestamp = 0;
 unsigned long int previous_animation_timestamp = 0;
 
-unsigned short int switch_1_pressed_count = 0;
-unsigned short int switch_2_pressed_count = 0;
-// unsigned short int switch_1_long_pressed_count = 0;
-unsigned short int switch_2_long_pressed_count = 0;
+bool switch_detection_end = false;
+int switch_1_short_press_count = 0;
+int switch_2_short_press_count = 0;
+int switch_1_long_press_count = 0;
+int switch_2_long_press_count = 0;
+bool switch_1_previous_type_of_press_is_short = true;
+bool switch_2_previous_type_of_press_is_short = true;
+bool switch_1_long_activated = false;
+bool switch_2_long_activated = false;
 
-char mode[100] = "FROM";
+
+// unsigned short int switch_1_pressed_count = 0;
+// unsigned short int switch_2_pressed_count = 0;
+// unsigned short int switch_1_long_pressed_count = 0;
+// unsigned short int switch_2_long_pressed_count = 0;
+
+int mode = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -51,7 +64,32 @@ void loop() {
   switch_1_state = digitalRead(INPUT_SWITCH_1);
   switch_2_state = digitalRead(INPUT_SWITCH_2);
 
-  switch_1_detection();
+  // switch_1_detection();
+  switch_detection(
+    &switch_1_state,
+    &switch_1_previous_state,
+    &switch_1_pressed,
+    &switch_1_released,
+    &switch_1_long_activated, 
+    &switch_1_short_press_count,
+    &switch_1_long_press_count,
+    &previous_timestamp_switch_1,
+    &switch_1_previous_type_of_press_is_short
+  );
+
+  switch_detection(
+    &switch_2_state,
+    &switch_2_previous_state,
+    &switch_2_pressed,
+    &switch_2_released,
+    &switch_2_long_activated, 
+    &switch_2_short_press_count,
+    &switch_2_long_press_count,
+    &previous_timestamp_switch_2,
+    &switch_2_previous_type_of_press_is_short
+  );
+
+  switch_actions();
 
   switch_1_previous_state = switch_1_state;
   switch_2_previous_state = switch_2_state;
@@ -310,51 +348,107 @@ void lightRedContinuousTransitionPlusGreen() {
   digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
 }
 
-int switch_1_short_press_count = 0;
-int switch_1_long_press_count = 0;
-bool switch_1_previous_type_of_press_is_short = true;
-bool switch_1_long_activated = false;
-
-void switch_1_detection() {
-  unsigned long int current_timestamp_switch_1 = millis();
+void switch_detection(
+  bool *switch_state,
+  bool *switch_previous_state,
+  bool *switch_pressed,
+  bool *switch_release,
+  bool *switch_long_activated,
+  int *switch_short_press_count,
+  int *switch_long_press_count,
+  unsigned long *previous_timestamp_switch,
+  bool *switch_previous_type_of_press_is_short
+  ) {
+  unsigned long int current_timestamp_switch = millis();
 
   // switch 1 is pressed
-  if (switch_1_state == true && switch_1_previous_state == false) {
-    previous_timestamp_switch_1 = current_timestamp_switch_1;
-    switch_1_pressed = true;
-    switch_1_released = false;
+  if (*switch_state == true && *switch_previous_state == false) {
+    switch_detection_end = false;
+    *previous_timestamp_switch = current_timestamp_switch;
+    *switch_pressed = true;
+    *switch_release = false;
   }
 
   // switch 1 is release
-  if (switch_1_state == false && switch_1_previous_state == true) {
-    if (switch_1_previous_type_of_press_is_short && switch_1_short_press_count < 2) {
-      switch_1_short_press_count++;
-    } else if (!switch_1_previous_type_of_press_is_short && switch_1_long_activated && switch_1_long_press_count < 2) {
-      switch_1_long_activated = false;
-      switch_1_long_press_count++;
+  if (*switch_state == false && *switch_previous_state == true) {
+    if (*switch_previous_type_of_press_is_short && *switch_short_press_count < 2) {
+      (*switch_short_press_count)++;
+    } else if (!*switch_previous_type_of_press_is_short && *switch_long_activated && *switch_long_press_count < 2) {
+      *switch_long_activated = false;
+      (*switch_long_press_count)++;
+
     }
-    switch_1_pressed = false;
-    switch_1_released = true;
-    previous_timestamp_switch_1 = current_timestamp_switch_1;
+    *switch_pressed = false;
+    *switch_release = true;
+    *previous_timestamp_switch = current_timestamp_switch;
   }
 
   // switch 1 is currently pressed for more than 1000ms
-  if (switch_1_state == true && (current_timestamp_switch_1 - previous_timestamp_switch_1 >= 1000)) {
+  if (*switch_state == true && (current_timestamp_switch - *previous_timestamp_switch >= 1000)) {
     // prevent use of short press after long press
-    switch_1_previous_type_of_press_is_short = false;
+    *switch_previous_type_of_press_is_short = false;
     // prevent a short press after long detected as long press
-    switch_1_long_activated = true;
+    *switch_long_activated = true;
   }
 
   // switch 1 has been released and 300ms has been passed since release
   // theorically the sequence of input is end
-  if (switch_1_released == true && (current_timestamp_switch_1 - previous_timestamp_switch_1 >= 300)) {
-    switch_1_released = false;
+  if (*switch_release == true && (current_timestamp_switch - *previous_timestamp_switch >= 300)) {
+    switch_detection_end = true;
+    *switch_release = false;
+    previous_detection_end_timestamp = current_timestamp_switch;
+  }
+}
+
+void switch_actions() {
+  unsigned long int current_detection_end_timestamp = millis();
+
+  if (switch_detection_end && (current_detection_end_timestamp - previous_detection_end_timestamp >= 300)) {
+    if (switch_1_short_press_count == 1 && switch_2_short_press_count == 1) {
+      // need action
+      mode = 1;
+    } else if (switch_1_short_press_count == 2 && switch_2_short_press_count == 2 && switch_1_long_press_count == 1 && switch_2_long_press_count == 1) {
+      mode = 2;
+    } else if (switch_1_short_press_count == 2 && switch_2_short_press_count == 2) {
+      mode = 3;
+    } else if (switch_1_long_press_count == 1 && switch_2_long_press_count == 1) {
+      mode = 4;
+    } else if (switch_1_long_press_count == 2 && switch_2_long_press_count == 2) {
+      mode = 5;
+    } else if (switch_1_short_press_count == 1) {
+      // need action
+      mode = 6;
+    } else if (switch_1_short_press_count == 2 && switch_1_long_press_count == 1) {
+      mode = 7;
+    } else if (switch_1_short_press_count == 2) {
+      mode = 8;
+    } else if (switch_1_long_press_count == 1) {
+      mode = 9;
+    } else if (switch_1_long_press_count == 2) {
+      mode = 10;
+    } else if (switch_2_short_press_count == 1) {
+      // need action
+      mode = 11;
+    } else if (switch_2_short_press_count == 2 && switch_2_long_press_count == 1) {
+      mode = 12;
+    } else if (switch_2_short_press_count == 2) {
+      mode = 13;
+    } else if (switch_2_long_press_count == 1) {
+      mode = 14;
+    } else if (switch_2_long_press_count == 2) {
+      mode = 15;
+    }
+
     switch_1_short_press_count = 0;
     switch_1_long_press_count = 0;
     switch_1_long_activated = false;
     switch_1_previous_type_of_press_is_short = true;
+
+    switch_2_short_press_count = 0;
+    switch_2_long_press_count = 0;
+    switch_2_long_activated = false;
+    switch_2_previous_type_of_press_is_short = true;
+
+    switch_detection_end = false;
   }
-
-
 }
