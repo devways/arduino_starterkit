@@ -1,167 +1,306 @@
-/*
-  Arduino Starter Kit example
-  Project 2 - Spaceship Interface
+const int OUTPUT_RED_LED_1 = 10;
+const int OUTPUT_RED_LED_2 = 9;
+const int OUTPUT_RED_LED_3 = 6;
+const int OUTPUT_GREEN_LED_1 = 5;
+const int OUTPUT_GREEN_LED_2 = 3;
 
-  This sketch is written to accompany Project 2 in the Arduino Starter Kit
+const int OUTPUT_RED_LED_ARRAY[3] = { OUTPUT_RED_LED_1, OUTPUT_RED_LED_2, OUTPUT_RED_LED_3 };
 
-  Parts required:
-  - one green LED
-  - two red LEDs
-  - pushbutton
-  - 10 kilohm resistor
-  - three 220 ohm resistors
+int red_led_index = 2;
 
-  created 13 Sep 2012
-  by Scott Fitzgerald
-
-  http://www.arduino.cc/starterKit
-
-  This example code is part of the public domain.
-*/
-
-bool switchRelease = false;
-bool switchPressed = false;
-
-int switchState = 0;
-int previousSwitchState = 0;
-bool blinkState = false;
-unsigned long previousBlinkMillis = 0;
-unsigned long previousMillis = 0;
-unsigned short int clickNumber = 0;
-unsigned short int mode = 0;
+const int INPUT_SWITCH_1 = 4;
+const int INPUT_SWITCH_2 = 2;
 
 
-bool buttonIsPressed() {
-  if (switchState == true && previousSwitchState == false) {
-    return true;
-  }
-  return false;
-}
+bool switch_1_pressed = false;
+bool switch_2_pressed = false;
+bool switch_1_released = false;
+bool switch_2_released = false;
 
-bool buttonIsRelease() {
-  if (switchState == false && previousSwitchState == true) {
-    return true;
-  }
-  return false;
-}
+bool switch_1_state = false;
+bool switch_2_state = false;
+bool switch_1_previous_state = false;
+bool switch_2_previous_state = false;
 
-void chooseMode() {
-  unsigned long currentMillis = millis();
+unsigned long previous_timestamp_switch_1 = 0;
+unsigned long previous_timestamp_switch_2 = 0;
 
-  if (buttonIsPressed()) {
-    Serial.println("print 1");
-    // Serial.println(mode);
-    if (clickNumber < 2) {
-      clickNumber = clickNumber + 1;
-      previousMillis = currentMillis;
-    }
-    switchPressed = true;
-    return;
-  }
-  
-  if (switchPressed && buttonIsRelease()) {
-    Serial.println("print 2");
-    switchPressed = false;
-    if (currentMillis - previousMillis >= 300) {
-      previousMillis = currentMillis;
-      mode = clickNumber;
-      clickNumber = 0;
-      switchRelease = false;
-      return;
-    }
-    switchRelease = true;
-    return;
-  }
+unsigned long int previous_timestamp = 0;
+unsigned long int previous_animation_timestamp = 0;
 
-  if (switchState == true && (currentMillis - previousMillis >= 1000)) {
-    // defineMode Long
-    Serial.println("print 3");
+unsigned short int switch_1_pressed_count = 0;
+unsigned short int switch_2_pressed_count = 0;
+unsigned short int switch_1_long_pressed_count = 0;
+unsigned short int switch_2_long_pressed_count = 0;
 
-    previousMillis = currentMillis;
-    mode = 3;
-    clickNumber = 0;
-    switchPressed = false;
-    return;
-  }
-
-  if (switchRelease && (currentMillis - previousMillis >= 300)) {
-    // definemode short (clickNumber)
-    Serial.println("print 4");
-
-    previousMillis = currentMillis;
-    mode = clickNumber;
-    clickNumber = 0;
-    switchRelease = false;
-    return;
-  }
-};
-
-void changeMode() {
-  // mode = !mode;
-}
+char mode[100] = "FROM";
 
 void setup() {
   Serial.begin(9600);
-  pinMode(2, INPUT);
+  pinMode(OUTPUT_RED_LED_1, OUTPUT);
+  pinMode(OUTPUT_RED_LED_2, OUTPUT);
+  pinMode(OUTPUT_RED_LED_3, OUTPUT);
+  pinMode(OUTPUT_GREEN_LED_1, OUTPUT);
+  pinMode(OUTPUT_GREEN_LED_2, OUTPUT);
 
-  pinMode(3, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
+  pinMode(INPUT_SWITCH_1, INPUT);
+  pinMode(INPUT_SWITCH_2, INPUT);
 }
 
 void loop() {
-  switchState = digitalRead(2);
+  switch_1_state = digitalRead(INPUT_SWITCH_1);
+  switch_1_previous_state = switch_1_state;
+}
 
-  chooseMode();
+/*
+ ******************************
+  All function for Left Button
+ ******************************
+*/
 
-  Serial.print("switchState: ");
-  Serial.print(switchState);
-  Serial.print(", previousSwitchState: ");
-  Serial.print(previousSwitchState);
-  Serial.print(", mode: ");
-  Serial.println(mode);
+void lightUpFromLeftToRight() {
+  int previous_red_led_index = red_led_index;
 
-  if (buttonIsPressed()) changeMode();
+  // futher this condition move in another function use when the switch 1 is click once
+  if (switch_1_state == HIGH && switch_1_previous_state == LOW) {
+    if (red_led_index < 2) {
+      red_led_index++;
+    } else {
+      red_led_index = 0;
+    }
+  }
+  
+  digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
+  digitalWrite(OUTPUT_RED_LED_ARRAY[red_led_index], HIGH);
+}
 
-  // if (!mode) {
-  //   digitalWrite(3, HIGH);
-  //   digitalWrite(5, LOW);
-  //   digitalWrite(6, LOW);
-  // } else {
-  //   unsigned long currentBlinkMillis = millis();
-  //   if (currentBlinkMillis - previousBlinkMillis >= 250) {
-  //      previousBlinkMillis = currentBlinkMillis;
-  //      blinkState = !blinkState;
-  //   }
-  //   digitalWrite(3, LOW);
-  //   digitalWrite(6, blinkState);
-  //   digitalWrite(5, !blinkState);
-  // }
+void lightUpFromLeftToRightContinuous() {
+  unsigned long int current_timestamp = millis();
+  if (current_timestamp - previous_timestamp >= 1000) {
+    int previous_red_led_index = red_led_index;
+    if (red_led_index < 2) {
+      red_led_index++;
+    } else {
+      red_led_index = 0;
+    }
+    digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
+    digitalWrite(OUTPUT_RED_LED_ARRAY[red_led_index], HIGH);
+    previous_timestamp = current_timestamp;
+  }
+}
 
-  switch (mode)
-  {
-    case 1:
-      digitalWrite(3, LOW);
-      digitalWrite(4, HIGH);
-      digitalWrite(5, LOW);
-      break;
-    case 2:
-      digitalWrite(3, LOW);
-      digitalWrite(4, LOW);
-      digitalWrite(5, HIGH);
-      break;
-    case 3:
-      digitalWrite(3, HIGH);
-      digitalWrite(4, LOW);
-      digitalWrite(5, LOW);
-      break;
-  default:
-    digitalWrite(3, LOW);
-    digitalWrite(4, HIGH);
-    digitalWrite(5, LOW);
-    break;
+int previous_red_led_index = red_led_index;
+
+void lightUpFromLeftToRightContinuousWithTransition() {
+  unsigned long int current_timestamp = millis();
+
+  if (current_timestamp - previous_timestamp >= 1000) {
+    digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
+    previous_red_led_index = red_led_index;
+    if (red_led_index < 2) {
+      red_led_index++;
+    } else {
+      red_led_index = 0;
+    }
+    previous_timestamp = current_timestamp;
   }
 
-  if (previousSwitchState == switchState) return;
-  previousSwitchState = switchState;
+  int brightness = (current_timestamp - previous_timestamp) / 4;
+  int brightnessAdjusted = brightness < 0 ? 0 : brightness > 250 ? 250 : brightness;
+
+  analogWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], 250 - brightnessAdjusted);
+  analogWrite(OUTPUT_RED_LED_ARRAY[red_led_index], brightnessAdjusted);
+}
+
+void lightUpLeftGreen() {
+  digitalWrite(OUTPUT_GREEN_LED_1, HIGH);
+}
+
+void lightUpFromLeftToRightContinuousWithTransitionPlusLeftGreen() {
+  lightUpFromLeftToRightContinuousWithTransition();
+  digitalWrite(OUTPUT_GREEN_LED_1, HIGH);
+}
+
+/*
+ ******************************
+  All function for Right Button
+ ******************************
+*/
+
+void lightUpFromRightToLeft() {
+  int previous_red_led_index = red_led_index;
+
+  // futher this condition move in another function use when the switch 2 is click once
+  if (switch_1_state == HIGH && switch_1_previous_state == LOW) {
+    if (red_led_index > 0) {
+      red_led_index--;
+    } else {
+      red_led_index = 2;
+    }
+  }
+  
+  digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
+  digitalWrite(OUTPUT_RED_LED_ARRAY[red_led_index], HIGH);
+}
+
+void lightUpFromRightToLeftContinuous() {
+  unsigned long int current_timestamp = millis();
+  if (current_timestamp - previous_timestamp >= 1000) {
+    int previous_red_led_index = red_led_index;
+    if (red_led_index > 0) {
+      red_led_index--;
+    } else {
+      red_led_index = 2;
+    }
+    digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
+    digitalWrite(OUTPUT_RED_LED_ARRAY[red_led_index], HIGH);
+    previous_timestamp = current_timestamp;
+  }
+}
+
+void lightUpFromRightToLeftContinuousWithTransition() {
+  unsigned long int current_timestamp = millis();
+  if (current_timestamp - previous_timestamp >= 1000) {
+    digitalWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], LOW);
+    previous_red_led_index = red_led_index;
+    if (red_led_index > 0) {
+      red_led_index--;
+    } else {
+      red_led_index = 2;
+    }
+    previous_timestamp = current_timestamp;
+  }
+
+  int brightness = (current_timestamp - previous_timestamp) / 4;
+  int brightnessAdjusted = brightness < 0 ? 0 : brightness > 250 ? 250 : brightness;
+
+  analogWrite(OUTPUT_RED_LED_ARRAY[previous_red_led_index], 250 - brightnessAdjusted);
+  analogWrite(OUTPUT_RED_LED_ARRAY[red_led_index], brightnessAdjusted);
+}
+
+void lightUpRightGreen() {
+  digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
+}
+
+void lightUpFromRightToLeftContinuousWithTransitionPlusRightGreen() {
+  lightUpFromRightToLeftContinuousWithTransition();
+  digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
+}
+
+/*
+ ******************************
+  All function for Simultanuous Left & Right Button
+ ******************************
+*/
+
+int left_red_led_index = 0;
+int right_red_led_index = 2;
+int previous_left_red_led_index = left_red_led_index;
+int previous_right_red_led_index = right_red_led_index;
+
+void lightUpFromOutsideToInside() {
+  previous_left_red_led_index = left_red_led_index;
+  previous_right_red_led_index = right_red_led_index;
+
+    // futher this condition move in another function use when the switch 1 & 2 is click simultanuous once 
+  if (switch_1_state == HIGH && switch_1_previous_state == LOW) {
+    int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+    if (left_red_led_index < (array_length / 2)) {
+      left_red_led_index++;
+      right_red_led_index--;
+    } else {
+      left_red_led_index = 0;
+      right_red_led_index = array_length - 1;
+    }
+  }
+
+  digitalWrite(OUTPUT_RED_LED_ARRAY[previous_left_red_led_index], LOW);
+  digitalWrite(OUTPUT_RED_LED_ARRAY[previous_right_red_led_index], LOW);
+  digitalWrite(OUTPUT_RED_LED_ARRAY[left_red_led_index], HIGH);
+  digitalWrite(OUTPUT_RED_LED_ARRAY[right_red_led_index], HIGH);
+  
+}
+
+void lightUpFromOutsideToInsideContinuous() {
+  unsigned long int current_timestamp = millis();
+  if (current_timestamp - previous_timestamp >= 1000) {
+    previous_left_red_led_index = left_red_led_index;
+    previous_right_red_led_index = right_red_led_index;
+
+    int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+    if (left_red_led_index < (array_length / 2)) {
+      left_red_led_index++;
+      right_red_led_index--;
+    } else {
+      left_red_led_index = 0;
+      right_red_led_index = array_length - 1;
+    }
+
+    digitalWrite(OUTPUT_RED_LED_ARRAY[previous_left_red_led_index], LOW);
+    digitalWrite(OUTPUT_RED_LED_ARRAY[previous_right_red_led_index], LOW);
+    digitalWrite(OUTPUT_RED_LED_ARRAY[left_red_led_index], HIGH);
+    digitalWrite(OUTPUT_RED_LED_ARRAY[right_red_led_index], HIGH);
+    previous_timestamp = current_timestamp;
+  }
+}
+
+void lightUpFromOutsideToInsideContinuousTransition() {
+  unsigned long int current_timestamp = millis();
+  if (current_timestamp - previous_timestamp >= 1000) {
+    analogWrite(OUTPUT_RED_LED_ARRAY[previous_left_red_led_index], 0);
+    analogWrite(OUTPUT_RED_LED_ARRAY[previous_right_red_led_index], 0);
+
+    previous_left_red_led_index = left_red_led_index;
+    previous_right_red_led_index = right_red_led_index;
+
+    int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+    if (left_red_led_index < (array_length / 2)) {
+      left_red_led_index++;
+      right_red_led_index--;
+    } else {
+      left_red_led_index = 0;
+      right_red_led_index = array_length - 1;
+    }
+    previous_timestamp = current_timestamp;
+  }
+
+  int brightness = (current_timestamp - previous_timestamp) / 4;
+  int brightnessAdjusted = brightness < 0 ? 0 : brightness > 250 ? 250 : brightness;
+
+  analogWrite(OUTPUT_RED_LED_ARRAY[previous_left_red_led_index], 250 - brightnessAdjusted);
+  analogWrite(OUTPUT_RED_LED_ARRAY[previous_right_red_led_index], 250 - brightnessAdjusted);
+  analogWrite(OUTPUT_RED_LED_ARRAY[left_red_led_index], brightnessAdjusted);
+  analogWrite(OUTPUT_RED_LED_ARRAY[right_red_led_index], brightnessAdjusted);
+}
+
+void lightRedPlusGreen() {
+  int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+  for(int i = 0; i < array_length; i++) {
+    digitalWrite(OUTPUT_RED_LED_ARRAY[i], HIGH);
+  }
+
+  digitalWrite(OUTPUT_GREEN_LED_1, HIGH);
+  digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
+}
+
+bool brightnessIncrease = true;
+
+void lightRedContinuousTransitionPlusGreen() {
+  unsigned long int current_timestamp = millis();
+  if (current_timestamp - previous_timestamp >= 1000) {
+    brightnessIncrease = !brightnessIncrease;
+    previous_timestamp = current_timestamp;
+  }
+
+  int brightness = (current_timestamp - previous_timestamp) / 4;
+  int brightnessAdjusted = brightness < 0 ? 0 : brightness > 250 ? 250 : brightness;
+  int brightnessUsed = brightnessIncrease ? brightnessAdjusted : 250 - brightnessAdjusted;
+
+  int array_length = sizeof(OUTPUT_RED_LED_ARRAY) / sizeof(OUTPUT_RED_LED_ARRAY[0]);
+  for(int i = 0; i < array_length; i++) {
+    analogWrite(OUTPUT_RED_LED_ARRAY[i], brightnessUsed);
+  }
+
+  digitalWrite(OUTPUT_GREEN_LED_1, HIGH);
+  digitalWrite(OUTPUT_GREEN_LED_2, HIGH);
 }
